@@ -1,0 +1,27 @@
+services:
+  barometer:
+    build: .
+    image: deploy-barometer:latest
+    container_name: deploy-barometer
+    restart: unless-stopped
+
+    # Published on all interfaces, so the API is reachable at
+    # http://<your-laptop-ip>:2323/check from anything on your network.
+    ports:
+      - "2323:2323"
+
+    # Your PIN and any overrides live here; .env is gitignored.
+    env_file:
+      - .env
+
+    environment:
+      # The bar sits on a host-local subnet (10.0.4.x over USB), which the
+      # default bridge network can already route to.
+      BAROMETER_BUSYBAR_HOST: ${BAROMETER_BUSYBAR_HOST:-10.0.4.20}
+      BAROMETER_HOST: 0.0.0.0
+      BAROMETER_PORT: "2323"
+
+      # A container cannot announce itself on the LAN: Docker's NAT does not
+      # carry multicast, and the only address it knows is its bridge IP. Run
+      # `python scripts/announce.py` on the host for deploy-barometer.local.
+      BAROMETER_MDNS_ENABLED: "false"
