@@ -15,11 +15,6 @@ physical **start/pause** button and it pulls the next quip from the API.
   <em>A green day — the whole verdict fitted to the panel.</em>
 </p>
 
-<!--
-  Second recording, showing a red "do not deploy" verdict. Drop the file in as
-  docs/assets/false.gif, then delete this comment's opening and closing markers
-  to publish the block below.
-
 <p align="center">
   <img src="docs/assets/false.gif"
        alt="A BUSY Bar showing a red background with a do-not-deploy verdict"
@@ -27,7 +22,6 @@ physical **start/pause** button and it pulls the next quip from the API.
   <br>
   <em>A red day — same fitting, opposite answer.</em>
 </p>
--->
 
 ---
 
@@ -143,6 +137,49 @@ The bar lights up, and you get back exactly what it displayed:
 
 Now **press the start/pause button on the bar** — it fetches the next message
 and re-renders. The API serves a random quip each time.
+
+### 6. Trigger it from a Shortcut (iOS, iPadOS, macOS)
+
+Because `/check` answers a plain `GET` and returns JSON, Apple's Shortcuts app
+can drive it with no glue code — which means a Home Screen icon, a menu bar
+click, a Focus automation, or "Hey Siri, should I deploy?".
+
+<p align="center">
+  <img src="docs/assets/shortcut_example.png"
+       alt="The Shortcuts editor showing a five-action shortcut named Should I Deploy?"
+       width="700">
+  <br>
+  <em>Five actions: fetch the verdict, then read the quip aloud.</em>
+</p>
+
+The shortcut above does this:
+
+| # | Action | What it does |
+| --- | --- | --- |
+| 1 | **URL** | `http://192.168.50.100:2323/check` — the endpoint to call. |
+| 2 | **Get contents of URL** | Performs the request. The bar lights up here. |
+| 3 | **Set variable** | Stores the JSON response for the next step. |
+| 4 | **Get value for `message`** | Pulls the quip out of the response. |
+| 5 | **Speak** | Reads it aloud. |
+
+So the bar shows the verdict and your device says it — useful when the bar is
+across the room, or behind you.
+
+A few things worth knowing when building your own:
+
+- **Step 2 is what triggers the display.** Everything after it is optional; a
+  one-action shortcut containing only *Get contents of URL* is enough to light
+  the bar.
+- **Use the `.local` name if you can.** `http://deploy-barometer.local:2323/check`
+  survives your machine changing IP, which a hardcoded address does not. iOS
+  resolves `.local` names on the same Wi-Fi network. If the app runs in Docker,
+  the name needs `scripts/announce.py` running on the host — see
+  [Name on the network](#name-on-the-network).
+- **Swap `message` for `should_deploy`** in step 4 if you want the raw verdict
+  rather than the quip, and branch on it with an *If* action — for example to
+  play a different sound, or to refuse to run your deploy shortcut at all.
+- **It only works on your own network.** The service is not exposed to the
+  internet, so this runs at home or on the office Wi-Fi, not over cellular.
 
 ---
 
