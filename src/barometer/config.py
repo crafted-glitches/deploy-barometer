@@ -38,6 +38,13 @@ from typing import Literal
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+#: Physical dial positions the bar reports, plus ``any`` to disable the gate.
+#: These mirror the firmware's ``SwitchPosition`` enum.
+DialPosition = Literal["apps", "busy", "custom", "settings", "off", "any"]
+
+#: What the start/pause button does before the dial's position is known.
+UnknownDialPolicy = Literal["allow", "block"]
+
 #: How a message too wide for one line is presented.
 #:
 #: * ``fit``    -- shrink and wrap so the whole message is on screen at once,
@@ -116,6 +123,22 @@ class Settings(BaseSettings):
         description="Pause before a too-tall message starts scrolling down, so it can be read.",
     )
     sound_enabled: bool = Field(default=True, description="Play the 8-bit verdict sound.")
+
+    # --- Button gating --------------------------------------------------------
+    button_dial_position: DialPosition = Field(
+        default="apps",
+        description=(
+            "Dial position required for the start/pause button to trigger a reading. "
+            "'any' disables the check and accepts presses in every position."
+        ),
+    )
+    button_when_dial_unknown: UnknownDialPolicy = Field(
+        default="allow",
+        description=(
+            "What to do before the dial's position is known. The bar only reports "
+            "changes, so its position is unknown until it is first moved."
+        ),
+    )
 
     # --- Discovery ------------------------------------------------------------
     mdns_enabled: bool = Field(

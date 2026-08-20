@@ -1,4 +1,4 @@
-# deploy-barometer
+# Deploy Barometer
 
 The infamous [shouldideploy.today](https://shouldideploy.today) displayed on a
 [BUSY Bar](https://busy.app) — in colour, fitted to the panel, with an 8-bit sound.
@@ -7,15 +7,27 @@ Call one endpoint and the bar floods **green** or **red**, fits the whole verdic
 onto its 72×16 LED matrix, and plays a chiptune fanfare or a buzz. Press the
 physical **start/pause** button and it pulls the next quip from the API.
 
-```
-┌──────────────────────┐   ┌──────────────────────┐   ┌──────────────────────┐
-│      Go for it!      │   │  How much do you     │   │ Trust me, they will  │
-│                      │   │  trust your logging  │   │ be much happier if   │
-│                      │   │  tools?              │   │ it wasn't broken...  │
-└──────────────────────┘   └──────────────────────┘   └──────────────────────┘
-   fits → one big line       wraps → still all on      too tall → holds, then
-                             screen at once            scrolls down
-```
+<p align="center">
+  <img src="docs/assets/true.gif"
+       alt="A BUSY Bar showing a green background with a deploy-friendly verdict"
+       width="700">
+  <br>
+  <em>A green day — the whole verdict fitted to the panel.</em>
+</p>
+
+<!--
+  Second recording, showing a red "do not deploy" verdict. Drop the file in as
+  docs/assets/false.gif, then delete this comment's opening and closing markers
+  to publish the block below.
+
+<p align="center">
+  <img src="docs/assets/false.gif"
+       alt="A BUSY Bar showing a red background with a do-not-deploy verdict"
+       width="700">
+  <br>
+  <em>A red day — same fitting, opposite answer.</em>
+</p>
+-->
 
 ---
 
@@ -294,6 +306,42 @@ Two things worth knowing:
 A press runs the same refresh path as `/check`, serialised behind a lock so a
 press and an API call cannot interleave draws.
 
+### Gating the button by dial position
+
+By default the button only triggers a reading when the bar's physical dial is
+on **Apps**. In Busy, Custom, Settings or Off it is ignored entirely — nothing
+is drawn and the device is not touched, so start/pause does its usual job of
+running a focus session.
+
+```ini
+BAROMETER_BUTTON_DIAL_POSITION=apps     # or busy / custom / settings / off / any
+```
+
+Set it to `any` to accept presses in every position.
+
+**One wrinkle worth knowing.** The bar reports dial *changes* but never its
+current position — not on connect, and no REST endpoint exposes it either
+(verified: `/api/status` is byte-identical in every position). So from startup
+until you first turn the dial, the app genuinely does not know where it is.
+
+```ini
+BAROMETER_BUTTON_WHEN_DIAL_UNKNOWN=allow   # or block
+```
+
+`allow` (default) assumes the dial is where you want it, so a bar parked on
+Apps works immediately after a restart, and the first dial movement corrects
+any wrong assumption. `block` is stricter but means the button appears dead
+after every restart until you nudge the dial — even if it is already on Apps.
+
+Either way the state is visible in `/health`, so a button that seems dead can
+be diagnosed without reading logs:
+
+```json
+{"device": {"dial": "BUSY", "button_active": false}}
+```
+
+`dial` is `null` until the dial is first moved.
+
 ---
 
 ## Configuration
@@ -309,6 +357,8 @@ All variables take the `BAROMETER_` prefix, from the environment or `.env`.
 | `TIMEZONE` | — | IANA timezone for the verdict. Blank uses the API default. |
 | `API_URL` | `https://shouldideploy.today/api` | Source API. |
 | `DISPLAY_MODE` | `fit` | `fit` or `scroll`. See above. |
+| `BUTTON_DIAL_POSITION` | `apps` | Dial position the button requires, or `any`. |
+| `BUTTON_WHEN_DIAL_UNKNOWN` | `allow` | `allow` or `block` before the dial is known. |
 | `READ_PAUSE_SECONDS` | `3.0` | Pause before a too-tall message scrolls down. |
 | `COLOR_GO` / `COLOR_STOP` / `COLOR_TEXT` | see above | `#RRGGBBAA` colours. |
 | `DISPLAY_SECONDS` | `60` | How long the verdict stays up. `0` = until replaced. |
@@ -423,6 +473,11 @@ almost certainly an active BUSY session. Raise `BAROMETER_DRAW_PRIORITY`.
 `BAROMETER_SOUND_ENABLED` is not `false`. Sound failures are logged as warnings
 and never block the display.
 
+**Button does nothing, no log line at all** — the dial gate is rejecting it.
+Check `/health`: if `button_active` is `false`, either the dial is not on Apps,
+or its position is still unknown while the policy is `block`. Turning the dial
+to Apps resolves both.
+
 **Button does nothing, logs repeat `status stream dropped`** — the bar's
 websocket server has got itself wedged; the REST API still works fine, which is
 why the display keeps updating while the button does not. Restart the bar and it
@@ -472,6 +527,50 @@ Firmware details worth recording, all verified on device:
   differ between messages though, so a scoped clear does run before each new
   verdict to remove stale lines — scoped to this app, leaving other apps alone.
 
+### Tests
+
+```bash
+pip install -e ".[dev]"
+pytest                       # 249 tests, ~1s
+pytest --cov                 # with coverage
+```
+
+The suite is **hermetic**: no BUSY Bar, no network, no clock dependence. That is
+deliberate — a suite needing hardware would be skipped in CI, and skipped tests
+protect nothing. The device is replaced by a recording double, the upstream API
+by `httpx.MockTransport`, and mDNS by a stub.
+
+Coverage is **100%** of `src/barometer` and the screen helper, with a 90% floor
+enforced by the pre-commit hook. The device-driving scripts
+(`calibrate_fonts.py`, `verify_metrics.py`, `announce.py`) are excluded: they
+exist to orchestrate work against real hardware and are exercised by running
+them, not by unit tests. Their measurement logic lives in `_screen.py`, which
+is covered.
+
+Tests are organised by behaviour rather than by function, and several pin
+findings that took hardware experimentation to establish — the protobuf
+zero-value omissions, the BGR framebuffer readback, the scoped clear. Those are
+the ones that regress silently, because they fail as a wrong-looking panel
+rather than an exception.
+
+### Pre-commit hook
+
+```bash
+pip install -e ".[dev]"
+pre-commit install           # once
+```
+
+Every commit then runs file hygiene checks, `ruff`, and the full suite behind a
+90% coverage gate. To run it manually:
+
+```bash
+pre-commit run --all-files
+```
+
+The hook resolves `pytest` through `.python-version`, which pins this directory
+to the project virtualenv — without it, pre-commit's sanitised PATH finds the
+system Python instead.
+
 ### Code documentation
 
 Every module, class, method and function carries a full docstring in **Google
@@ -489,10 +588,9 @@ for m in (barometer.fonts, barometer.layout, barometer.verdict):
     print(doctest.testmod(m))"
 ```
 
-There is otherwise **no test suite**. The two scripts in `scripts/` are the
-closest thing to one: `verify_metrics.py` in particular asserts the font
-metrics still match what the hardware renders, which is the single most
-load-bearing assumption in the codebase.
+Beyond the unit suite, `scripts/verify_metrics.py` asserts the font metrics
+still match what the hardware renders — the single most load-bearing assumption
+in the codebase, and the one thing no amount of mocking can confirm.
 
 ### Layout
 
@@ -507,6 +605,20 @@ src/barometer/
 ├── discovery.py       mDNS announcement of deploy-barometer.local
 ├── verdict.py         shouldideploy.today client
 └── config.py          Environment-driven settings
+
+docs/assets/        README media (demo recordings)
+
+tests/
+├── conftest.py        Fixtures and the recording device double
+├── test_fonts.py      Text measurement and the metrics table
+├── test_layout.py     Fit/wrap/scroll decisions
+├── test_busybar.py    Driver: frames, gating, assets, lifecycle
+├── test_lifecycle.py  Animation, reconnection, startup and shutdown
+├── test_main.py       HTTP endpoints and the refresh coordinator
+├── test_verdict.py    Upstream API client
+├── test_config.py     Settings, validation and URL normalisation
+├── test_discovery.py  mDNS announcement
+└── test_screen.py     Framebuffer readback (the BGR correction)
 
 scripts/
 ├── calibrate_fonts.py Measure fonts on-device -> font_metrics.json

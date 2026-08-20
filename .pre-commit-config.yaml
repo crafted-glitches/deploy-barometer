@@ -1,0 +1,38 @@
+# Run `pre-commit install` once; hooks then run automatically on every commit.
+# Manual run over the whole repo: `pre-commit run --all-files`.
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        # README demo recordings live in docs/assets/ and legitimately run to
+        # a couple of megabytes. Raised rather than removed, so a stray build
+        # artefact or dependency vendored by accident is still caught.
+        args: [--maxkb=4096]
+      # The device PIN lives in .env (gitignored); this guards against secrets
+      # reaching a public repo by any other route.
+      - id: detect-private-key
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.16.3
+    hooks:
+      - id: ruff
+        args: [--fix]
+
+  - repo: local
+    hooks:
+      # Runs the whole suite, not just changed files: these tests are hermetic
+      # and finish in about a second, and a partial run would miss exactly the
+      # cross-module breakage worth catching before a push.
+      - id: pytest
+        name: pytest (suite + 90% coverage gate)
+        entry: pytest --cov --cov-fail-under=90 -q
+        language: system
+        types: [python]
+        pass_filenames: false
+        always_run: true

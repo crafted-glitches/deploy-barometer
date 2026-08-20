@@ -19,6 +19,14 @@ dependencies = [
 [project.optional-dependencies]
 # Only the calibration and verification scripts need to read the framebuffer.
 calibration = ["pillow>=10.0"]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+    "pytest-cov>=5.0",
+    "pre-commit>=3.7",
+    "ruff>=0.6",
+    "pillow>=10.0",
+]
 
 [project.scripts]
 deploy-barometer = "barometer.main:main"
@@ -33,3 +41,56 @@ packages = ["barometer"]
 
 [tool.setuptools.package-data]
 barometer = ["font_metrics.json"]
+
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+# Async tests need no per-test decorator.
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "-ra",
+]
+
+[tool.coverage.run]
+source = ["barometer", "scripts"]
+branch = true
+omit = [
+    # Device-driving entry points: these exist to orchestrate calibration
+    # against real hardware and are exercised by running them, not by unit
+    # tests. Their measurement logic is covered via _screen.py.
+    "scripts/calibrate_fonts.py",
+    "scripts/verify_metrics.py",
+    "scripts/announce.py",
+]
+
+[tool.coverage.report]
+precision = 1
+show_missing = true
+exclude_also = [
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "RUF"]
+ignore = [
+    # These flag characters that merely resemble ASCII. This project uses real
+    # typography in prose, and fonts.py deliberately contains lookalikes -- a
+    # table whose entire purpose is normalising them.
+    "RUF001",
+    "RUF002",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Scripts adjust sys.path before importing the package, which is exactly what
+# E402 exists to flag; here it is deliberate and unavoidable.
+"scripts/*.py" = ["E402"]

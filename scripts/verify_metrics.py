@@ -22,10 +22,10 @@ import httpx
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from _screen import capture_front, ink_box  # noqa: E402
+from _screen import capture_front, ink_box
 
-from barometer import fonts  # noqa: E402
-from barometer.config import settings  # noqa: E402
+from barometer import fonts
+from barometer.config import settings
 
 SAMPLES = [
     "No",

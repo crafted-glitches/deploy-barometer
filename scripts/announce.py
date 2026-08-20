@@ -25,8 +25,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from barometer.config import settings  # noqa: E402
-from barometer.discovery import Announcer  # noqa: E402
+from barometer.config import settings
+from barometer.discovery import Announcer
 
 
 async def run() -> int:

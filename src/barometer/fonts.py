@@ -85,8 +85,13 @@ _METRICS_PATH = Path(__file__).with_name("font_metrics.json")
 #: bitmap fonts can draw. Typographic quotes and dashes appear in the quips,
 #: and a non-breaking space would otherwise survive whitespace collapsing.
 _TRANSLITERATIONS = {
-    "‘": "'", "’": "'", "“": '"', "”": '"',
-    "–": "-", "—": "-", "…": "...", " ": " ",
+    "\u2018": "'", "\u2019": "'", "\u201c": '"', "\u201d": '"',
+    "\u2013": "-", "\u2014": "-", "\u2026": "...",
+    # Written as an escape rather than the literal character: an invisible
+    # non-breaking space is indistinguishable from a plain one in source, and
+    # tooling that normalises whitespace turns this mapping into a silent
+    # no-op -- which deletes the character instead, running words together.
+    "\u00a0": " ",
 }
 
 

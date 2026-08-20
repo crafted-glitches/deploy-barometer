@@ -136,6 +136,37 @@ class BusyBarDisplay:
             compatibility_mode="none",
         )
         self._animation: asyncio.Task[None] | None = None
+        self._dial: str | None = None
+
+    @property
+    def dial_position(self) -> str | None:
+        """The dial's last reported position, or ``None`` if never reported.
+
+        The bar only emits an event when the dial *moves*, and never announces
+        its position on connect, so this stays ``None`` from startup until the
+        dial is first turned. See :meth:`watch_start_button` for how that
+        window is handled.
+
+        Returns:
+            An upper-case position name such as ``"APPS"`` or ``"BUSY"``, or
+            ``None`` while unknown.
+        """
+        return self._dial
+
+    def _press_allowed(self) -> bool:
+        """Decide whether a button press should trigger a reading.
+
+        Returns:
+            ``True`` if the gate is disabled, the dial is confirmed to be in
+            the required position, or the position is unknown and the
+            configured policy allows it.
+        """
+        required = settings.button_dial_position
+        if required == "any":
+            return True
+        if self._dial is None:
+            return settings.button_when_dial_unknown == "allow"
+        return self._dial == required.upper()
 
     async def aclose(self) -> None:
         """Stop any animation and close the device connection.
@@ -477,8 +508,12 @@ class BusyBarDisplay:
 
         Returns:
             A summary containing ``reachable`` (always ``True`` — failure is
-            signalled by raising), ``host``, ``firmware`` version and
-            ``battery_charge`` as a percentage.
+            signalled by raising), ``host``, ``firmware`` version,
+            ``battery_charge`` as a percentage, the last known ``dial``
+            position (``None`` until the dial is first moved) and
+            ``button_active``, which reports whether a press would currently
+            trigger a reading. The last two make the gate observable, so a
+            button that appears dead can be diagnosed without reading logs.
 
         Raises:
             Exception: Propagated if the device cannot be reached or errors.
@@ -492,6 +527,8 @@ class BusyBarDisplay:
             "host": settings.busybar_host,
             "firmware": getattr(firmware, "version", None),
             "battery_charge": getattr(power, "battery_charge", None),
+            "dial": self._dial,
+            "button_active": self._press_allowed(),
         }
 
     # --- input ----------------------------------------------------------------
@@ -529,6 +566,29 @@ class BusyBarDisplay:
         against an already-struggling device — which is exactly how this was
         discovered.
 
+        **The dial gates the button.** Presses only trigger a reading when the
+        bar's physical dial is in the configured position (``apps`` by
+        default), so the button keeps its normal device behaviour in Busy or
+        Custom mode. Position is tracked from the same stream: a ``switch_event``
+        updates it, and here too protobuf's omission of zero values bites —
+        ``BUSY`` is enum ``0``, so it arrives as an *empty* event and has to be
+        read as the default.
+
+        The bar never announces the dial's position on connect, only when it
+        changes, so the position is unknown from startup until the dial is
+        first moved. What happens in that window is configurable; the default
+        allows presses, on the grounds that a bar parked on Apps — the intended
+        setup — then works immediately, and the first dial movement corrects
+        any wrong assumption.
+
+        A blocked press is logged and otherwise ignored entirely: nothing is
+        drawn and the device is not touched, so start/pause does its usual job.
+
+        The last known position is deliberately *kept* across reconnects rather
+        than reset to unknown. It may be stale if the dial moved while the
+        stream was down, but a dial that has not moved is the far more likely
+        case, and resetting would needlessly fall back to the unknown policy.
+
         Callback errors are logged and swallowed, so one failed refresh — an
         upstream API blip, say — does not tear down the watcher and cost every
         future press.
@@ -555,12 +615,29 @@ class BusyBarDisplay:
                     if time.monotonic() - started > _HEALTHY_AFTER_SECONDS:
                         delay = _RECONNECT_MIN
                     for update in message.get("updates", []):
-                        button = update.get("input", {}).get("button_event")
+                        event = update.get("input", {})
+
+                        switch = event.get("switch_event")
+                        if switch is not None:
+                            # BUSY is enum value 0, so protobuf omits it and an
+                            # empty event means the dial is on BUSY.
+                            self._dial = switch.get("position", "BUSY")
+                            logger.info("dial moved to %s", self._dial)
+                            continue
+
+                        button = event.get("button_event")
                         if button is None:
                             continue
                         if button.get("button") != "START":
                             continue
                         if button.get("action", "PRESS") != "PRESS":
+                            continue
+                        if not self._press_allowed():
+                            logger.info(
+                                "start button ignored (dial on %s, needs %s)",
+                                self._dial or "unknown",
+                                settings.button_dial_position.upper(),
+                            )
                             continue
                         logger.info("start button pressed")
                         try:

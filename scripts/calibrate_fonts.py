@@ -29,9 +29,9 @@ import httpx
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from _screen import capture_front, ink_box  # noqa: E402
+from _screen import capture_front, ink_box
 
-from barometer.config import settings  # noqa: E402
+from barometer.config import settings
 
 FONTS = ["tiny", "small", "normal", "condensed", "bold", "large", "extra_large"]
 GAP = 1

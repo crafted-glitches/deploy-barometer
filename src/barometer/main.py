@@ -25,7 +25,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 import httpx
@@ -33,8 +33,8 @@ from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
 from .busybar import BusyBarDisplay
-from .discovery import Announcer
 from .config import settings
+from .discovery import Announcer
 from .verdict import fetch_verdict
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -109,7 +109,7 @@ class Barometer:
                 "timezone": verdict.timezone,
                 "date": verdict.date,
                 "source": source,
-                "shown_at": datetime.now(timezone.utc).isoformat(),
+                "shown_at": datetime.now(UTC).isoformat(),
                 "display": rendered,
             }
             self.last_reading = reading
