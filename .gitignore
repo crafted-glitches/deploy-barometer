@@ -225,3 +225,8 @@ __marimo__/
 
 # macOS
 .DS_Store
+
+# Raw screen recordings. Source footage is far too large for git (GitHub blocks
+# anything over 100 MiB); compressed derivatives live in docs/assets/ instead.
+*.mov
+*.MOV

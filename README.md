@@ -23,6 +23,26 @@ physical **start/pause** button and it pulls the next quip from the API.
   <em>A red day — same fitting, opposite answer.</em>
 </p>
 
+<p align="center">
+  <a href="docs/assets/demo.mp4">▶️ Watch the 45-second demo</a>
+  <br>
+  <em>With sound — the 8-bit cues are half the fun.</em>
+</p>
+
+<!--
+  For an inline player instead of a link: GitHub only renders video from its own
+  attachment CDN, not from a path in the repo. To switch:
+
+    1. Open a new issue in this repo (do not submit it).
+    2. Drag docs/assets/demo.mp4 into the comment box and wait for the upload
+       to finish.
+    3. Copy the generated https://github.com/user-attachments/assets/... URL.
+    4. Close the issue without submitting, then paste that URL below on its own
+       line and delete this comment.
+
+  https://github.com/user-attachments/assets/PASTE-ID-HERE
+-->
+
 ---
 
 ## Guide for new users
