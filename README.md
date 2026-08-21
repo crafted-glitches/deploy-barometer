@@ -23,27 +23,28 @@ physical **start/pause** button and it pulls the next quip from the API.
   <em>A red day — same fitting, opposite answer.</em>
 </p>
 
+<div align="center">
+
 https://github.com/user-attachments/assets/e1043445-707f-47a5-8271-9499b5dfb508
 
-<p align="center">
-  <em>45 seconds, with sound — the 8-bit cues are half the fun.
-  <br>
-  Also available as a <a href="docs/assets/demo.mp4">file in this repo</a>.</em>
-</p>
+<em>45 seconds, with sound — the 8-bit cues are half the fun.</em>
+
+</div>
 
 <!--
-  The bare URL above is a GitHub attachment; on its own line, github.com may
-  render it as an inline player. It must stay a `github.com/user-attachments/`
-  URL: the S3 address it redirects to is signed and expires after 300 seconds.
+  The demo is a GitHub attachment, rendered inline by github.com. Keep it as a
+  `github.com/user-attachments/` URL: that redirects to a signed S3 address
+  carrying X-Amz-Expires=300, so the S3 form is dead five minutes after it is
+  minted and must never be pasted into a file.
 
-  A <video> tag is not an option -- GitHub's markdown sanitiser strips it, along
-  with the src of any nested <source>. `![alt](file.mp4)` fails too, producing an
-  <img> pointing at an mp4. <img> itself survives, which is why the GIFs work.
+  A <video> tag cannot be used -- GitHub's markdown sanitiser strips it, and the
+  src of any nested <source> with it. The blank lines inside the div matter:
+  they keep the URL in a markdown block so it still becomes a player.
 
-  If the attachment ever 404s, it is because the comment holding it was never
-  posted: attachments only become publicly readable once their comment is
-  submitted. The repo link on the line above keeps working regardless.
+  docs/assets/demo.mp4 is the same recording, kept as the only local master now
+  that the original .mov is gone.
 -->
+
 
 
 ---
