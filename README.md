@@ -23,25 +23,28 @@ physical **start/pause** button and it pulls the next quip from the API.
   <em>A red day — same fitting, opposite answer.</em>
 </p>
 
+https://github.com/user-attachments/assets/e1043445-707f-47a5-8271-9499b5dfb508
+
 <p align="center">
-  <a href="docs/assets/demo.mp4">▶️ Watch the 45-second demo</a>
+  <em>45 seconds, with sound — the 8-bit cues are half the fun.
   <br>
-  <em>With sound — the 8-bit cues are half the fun.</em>
+  Also available as a <a href="docs/assets/demo.mp4">file in this repo</a>.</em>
 </p>
 
 <!--
-  For an inline player instead of a link: GitHub only renders video from its own
-  attachment CDN, not from a path in the repo. To switch:
+  The bare URL above is a GitHub attachment; on its own line, github.com may
+  render it as an inline player. It must stay a `github.com/user-attachments/`
+  URL: the S3 address it redirects to is signed and expires after 300 seconds.
 
-    1. Open a new issue in this repo (do not submit it).
-    2. Drag docs/assets/demo.mp4 into the comment box and wait for the upload
-       to finish.
-    3. Copy the generated https://github.com/user-attachments/assets/... URL.
-    4. Close the issue without submitting, then paste that URL below on its own
-       line and delete this comment.
+  A <video> tag is not an option -- GitHub's markdown sanitiser strips it, along
+  with the src of any nested <source>. `![alt](file.mp4)` fails too, producing an
+  <img> pointing at an mp4. <img> itself survives, which is why the GIFs work.
 
-  https://github.com/user-attachments/assets/PASTE-ID-HERE
+  If the attachment ever 404s, it is because the comment holding it was never
+  posted: attachments only become publicly readable once their comment is
+  submitted. The repo link on the line above keeps working regardless.
 -->
+
 
 ---
 
